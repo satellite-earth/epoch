@@ -1,8 +1,8 @@
-const utils = require('@satellite-earth/dev-utils');
-const Torrent = require('@satellite-earth/dev-torrent');
-const Signal = require('@satellite-earth/dev-signal');
-const Parcel = require('@satellite-earth/dev-parcel');
-const State = require('@satellite-earth/dev-state');
+const utils = require('@satellite-earth/utils');
+const Torrent = require('@satellite-earth/torrent');
+const Signal = require('@satellite-earth/signal');
+const Parcel = require('@satellite-earth/parcel');
+const State = require('@satellite-earth/state');
 
 class Epoch extends Torrent {
 
