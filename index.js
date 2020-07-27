@@ -316,6 +316,11 @@ class Epoch extends Torrent {
 		return next;
 	}
 
+	// If epoch's data has been loaded
+	get initialized () {
+		return this.signals.length > 0;
+	};
+
 	// Get array of signals in canonical order
 	get signals () {
 		const array = [];
