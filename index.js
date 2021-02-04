@@ -4,6 +4,7 @@ const Signal = require('@satellite-earth/signal');
 const Parcel = require('@satellite-earth/parcel');
 const State = require('@satellite-earth/state');
 
+
 class Epoch extends Torrent {
 
 	constructor (payload) {
@@ -61,22 +62,50 @@ class Epoch extends Torrent {
 			
 			// Unpack signals array and assign location params
 			for (let blockNumber of range) {
+
 				for (let item of unpacked.signals.block[blockNumber]) {
+
+					const _signed_ = item[0];
+					let namespace;
+					let action;
+					let sender;
+					let alias;
+					let sig;
+
+					if (item.length > 3) { // Aliased
+
+						action = item[2];
+						sig = item[3];
+
+						const _a = item[1].split('.');
+						sender = utils.hexToUtf8('0x' + _a[0]);
+						alias = _a[0];
+						
+						if (typeof _a[1] !== 'undefined') {
+							namespace = utils.hexToUtf8('0x' + _a[1]);
+						}
+
+					} else { // Anonymous
+
+						action = item[1];
+						sig = item[2];
+					}
 					
 					const signal = new Signal({
-						_signed_: item[0],
+						_signed_,
 						_params_: {
 							blockNumber,
 							timestamp: unpacked.signals.clock[blockNumber][1],
-							alias: item[1],
-							sig: item[3]
+							alias,
+							sig
 						}
 					}, {
-						action: item[2],
+						action,
+						sender,
+						namespace,
 						world: this.name,
 						epoch: this.ancestor,
-						block: unpacked.signals.clock[blockNumber][0],
-						sender: utils.hexToUtf8('0x' + item[1])
+						block: unpacked.signals.clock[blockNumber][0]
 					});
 
 					signals.push(signal);
@@ -107,6 +136,10 @@ class Epoch extends Torrent {
 			signer: this.name,
 			alpha: this.alpha
 		};
+
+		// Compute the signer address so it will
+		// be available to state's set funciton
+		signal.address();
 
 		// If signal is attempting to create or mutate a state
 		if (signal.action === 'evolve') {
@@ -400,7 +433,7 @@ class Epoch extends Torrent {
 				[blockNumber]: [ hash, timestamp ]
 			},
 			block: {
-				[blockNumber]: [ contained, alias, signature, action ]
+				[blockNumber]: [ contained, alias, action, signature ]
 			}
 		};
 
@@ -415,11 +448,25 @@ class Epoch extends Torrent {
 				signals.block[signal.blockNumber] = [];
 			}
 
+			const data = [ signal.contained ];
+
+			// Add signal sender if defined
+			if (typeof signal.sender !== 'undefined') {
+
+				let _sender = utils.utf8ToHex(signal.sender).slice(2);
+
+				// Append namespace if defined (null indicates top level alias)
+				if (typeof signal.namespace === 'string') {
+					_sender += `.${utils.utf8ToHex(signal.namespace).slice(2)}`;
+				}
+
+				data.push(_sender);
+			}
+
 			// Add the signal to its block number's array with
 			// signed data and standard minimum parameters.
 			signals.block[signal.blockNumber].push([
-				signal.contained,
-				signal._params_.alias,
+				...data,
 				signal.action,
 				signal.signature
 			]);
